@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<!-----------------弹出框----------------------------->
+<div id="spu_dlg" class="easyui-dialog" title="编辑spu" style="width:800px;height:620px;"
+     closed="true"  data-options="iconCls:'icon-save',resizable:true,modal:false" buttons="#spuBtns" >
+    <form id="spuForm">
+        <br/>
+        &nbsp;&nbsp;<label> spu名称:</label>
+        <input  id="spuName" name="spuName" class="easyui-textbox" data-options="" style="width:300px;"/>
+        <br/><br/>
+        &nbsp;&nbsp;<label> spu描述:</label>
+        <input  id="description" name="description" class="easyui-textbox" data-options="multiline:true" style="width:500px;height:100px"/>
+
+        <input id="spuId" name="spuId" type="hidden"/>
+        <br/><br/>
+
+        <!----------------商品图片列表 ----------------------->
+
+        <table id="spuImgDg" class="easyui-datagrid" title="商品图片列表"
+               data-options="singleSelect:true,method:'get',toolbar:'#spuImgTootbar'" ></table>
+
+        <!----------------图片列表工具栏----------------------->
+        <div id="spuImgTootbar" style="padding:5px;height:auto"  >
+            <div style="margin-bottom:5px">
+                <a href="#" id="spuImgAdd" class="easyui-linkbutton" iconCls="icon-add" plain="true">添加图片</a>
+                <a href="#" id="spuImgUploadBtn" class="easyui-linkbutton" iconCls="icon-save" plain="true" >图片上传</a>
+                <a href="#" class="easyui-linkbutton" iconCls="icon-remove" plain="true">删除</a>
+            </div>
+        </div>
+
+        <br/><br/>
+        <!----------------销售属性列表---------------------------->
+        <table id="spuSaleAttrDg" class="easyui-datagrid" title="销售属性列表"
+               data-options="singleSelect:true,method:'get',toolbar:'#spuSaleAttrTootbar'" ></table>
+
+        <!----------------销售属性列表工具栏----------------------->
+        <div id="spuSaleAttrTootbar" style="padding:5px;height:auto"  >
+            <div style="margin-bottom:5px">
+                <a href="#" id="spuSaleAttrAddBtn" class="easyui-linkbutton" iconCls="icon-add" onclick="addSpuSaleAttr()" plain="true">添加销售属性</a>
+                <a href="#" id="spuSaleAttrEditBtn" class="easyui-linkbutton" iconCls="icon-edit" plain="true" onclick="editSpuSaleAttr()">编辑销售属性</a>
+                <a href="#" class="easyui-linkbutton" iconCls="icon-remove" plain="true" >删除</a>
+            </div>
+        </div>
+
+        <div th:include="spuSaleAttrPage"></div>
+
+    </form>
+</div>
+<!----------------弹出框的按钮组----------------------->
+<div id="spuBtns">
+    <a href="javascript:saveSpu()" class="easyui-linkbutton">保 存</a>
+    <a href="Javasscript:$('#spu_dlg').dialog('close')" class="easyui-linkbutton" >关 闭</a>
+</div>
+
+<script language="JavaScript">
+    //初始化spu添加的对话框中的控件
+    function initSpuInfoDlg() {
+
+         // 初始化 图片表格
+         initSpuImgListDatagrid();
+
+         // 初始化异步上传插件webuploader
+         initUploader();
+
+         // 初始化 销售属性表格
+         initSpuSaleAttrListDatagrid();
+     }
+
+    //初始化 图片表格
+    function initSpuImgListDatagrid(spuInfo){
+        //清空之前的图片，每次打开都是新的选择
+        $('#spuImgDg').datagrid('loadData', {total: 0, rows: []});
+
+        // 初始化图片表格，加入easyui的扩展空间
+        spuImgDg = $("#spuImgDg").datagrid({
+            idField: 'fileId',    //标识行的主键  可以利用getRowIndex进行查询
+            columns: [[
+                {field: 'fileId', title: '文件编号', width: '15%'},//隐藏文件页面内部编号
+                {field: 'imgName', title: '图片简称', width: '20%',
+                    editor: { type: 'validatebox', options: {required: true}}
+                },
+                {field: 'imgUrl', title: '图片路径', hidden: false},  //隐藏真实路径
+                {field: 'progress', title: '上传进度', width: '20%',
+                    formatter: function (value, row, index) {
+                        if (!value) {
+                            value = 0;
+                        }
+                        var htmlstr =
+                            "<div class='easyui-progressbar progressbar' style='width:100px;height:20px;' value='" + value + "' text='" + value + "'%>" +
+                            "<div class='progressbar-text'  style='width: 100px; height: 20px; line-height: 20px;'>" + value + "%</div>" +
+                            "<div class='progressbar-value' style='width:" + value + "%; height: 20px; line-height: 20px;'>" +
+                            "<div class='progressbar-text' style='width: 100px; height: 20px; line-height: 20px;'>" + value + "%</div>" +
+                            "</div>" +
+                            "</div>";
+                        return htmlstr;
+                    }
+                },
+                {field: 'imgState', title: '上传状态', width: '20%',           //如果存在路径表示上传成功
+                    formatter: function (value, row, index) {
+
+                        if (row.imgUrl != undefined && row.imgUrl != '') {
+                            return '已上传';
+                        } else {
+                            return '等待上传';
+                        }
+                    }
+                }
+            ]],
+            onDblClickRow: function (rowIndex, rowData) {
+                //双击开启编辑行
+                spuImgDg.datagrid("beginEdit", rowIndex);
+                //设定当失去焦点时,退出编辑状态
+                var imgName = rowData.imgName;
+                $("input.datagrid-editable-input").val(imgName).bind("blur", function (evt) {
+                    spuImgDg.datagrid('endEdit', rowIndex);
+                });
+            },
+            view: detailview,
+            detailFormatter: function (rowIndex, rowData) {
+                return "<img src=" + rowData.imgUrl + " style='width:100px;height:100px;'>";
+            }
+        });
+        if (spuInfo) {
+            spuImgDg.datagrid({url: "spuImageList?spuId=" + spuInfo.id});
+        }
+
+    }
+
+    // 初始化异步上传插件webuploader
+    function initUploader(){
+
+        // 将上传控件绑定到图片数据表格的相关按钮上
+        var spuImgDg=  $("#spuImgDg");
+        //初始化上传控件
+        var spuImgUploader = WebUploader.create({
+            auto:false,
+            // swf文件路径   -- 插件
+            swf: '/webuploader/Uploader.swf',
+            // 文件接收路径   -- controller层处理
+            server: '/fileUpload',
+            // 选择文件的按钮
+            pick: '#spuImgAdd',
+            // 不压缩image, 默认如果是jpeg，文件上传前会压缩一把再上传！
+            resize: false,
+            //设定文件大小上限 2M
+            fileSingleSizeLimit:2*1024*1024,
+            //可接受的文件类型
+            accept: {
+                title: 'Images',
+                extensions: 'gif,jpg,jpeg,bmp,png',
+                mimeTypes: 'image/*'
+            }
+        });
+
+        //当用户选择了文件以后，表格要进行增行
+        spuImgUploader.on('fileQueued',function (file) {
+            var row={
+                fileId:file.id,
+                imgName:file.name
+            }
+            spuImgDg.datagrid('appendRow',row);
+        });
+
+        //上传过程中，该进度会反复触发
+        spuImgUploader.on( 'uploadProgress', function( file, percentage ) {
+            var rowIndex=spuImgDg.datagrid('getRowIndex',file.id);
+
+            var progessRow={progress:(percentage*100).toFixed(2)};// 进度条长短
+
+            spuImgDg.datagrid('updateRow', {index:rowIndex,row:progessRow});
+        });
+
+        // 上传成功时，要把生成的图片路径返回给表格的行中的url
+        spuImgUploader.on( 'uploadSuccess', function( file ,response) {//data
+            var fileId=file.id;
+            var rowIndex = spuImgDg.datagrid('getRowIndex',file.id);//通过file.id查询到行号
+            spuImgDg.datagrid('updateRow',
+                {   index:rowIndex,
+                    row:{imgUrl:response._raw}
+                });
+        });
+
+        $('#spuImgUploadBtn').click(function(){
+            if(spuImgUploader.getFiles().length<=0){
+                $.messager().alert('警告','没有需要上传的文件','warning');
+                return;
+            }
+            spuImgUploader.upload();
+        });
+
+
+    }
+
+    //初始化 销售属性表格
+    function initSpuSaleAttrListDatagrid(spuInfo){
+        /*给表格添加行标题*/
+        $("#spuSaleAttrDg").datagrid({
+            columns: [[
+                {field: 'id', title: '销售属性编号', width: 130},
+                {field: 'saleAttrName', title: '销售属性名称', width: 190},
+                {field: 'spuSaleAttrValueJson', title: '销售属性值暂存', width: 350},
+            ]]
+        });
+     }
+    //打开销售属性值的对话框
+    function addSpuSaleAttr(){
+         $("#spuSaleAttr_dlg").dialog("open");
+
+         // 初始化 销售属性值对话框中的数据表格控件
+         initSpuSaleAttrDlg();
+         /* 定义时有形参, 调用时没有传入实参, 在java中绝对是错误的，可是js是弱类型语言,没有这个限制，好像js中方法自带类似于java可变形参的东西*/
+     }
+
+    //保存spu信息
+    function saveSpu() {
+
+        //-----------------------------封装spuInfo的对象----------------------------------
+        // 【 SpuInfo 】bean对象 【{id,spuName,description,catalog3Id,临时字段List<SpuSaleAttr> spuSaleAttrList】,【临时字段List<SpuImage> spuImageList】}
+
+        //  临时字段SpuSaleAttr
+        //      id、spuId、saleAttrId、saleAttrName、【临时字段List<SpuSaleAttrValue>spuSaleAttrValueList】
+        //                                                 id、spuId、saleAttrId、saleAttrValueName
+
+        //  临时字段SpuImage
+        //     : id、spuId、imgName、imgUrl
+
+        var spuInfo = {};
+
+        // 获取spu名称
+        var spuName = $("#spuName").textbox("getValue");
+        spuInfo["spuName"] = spuName ; // 给spuInfo对象添加spuName属性并赋值
+        // 获取描述信息
+        var description = $("#description").textbox("getValue");
+        spuInfo["description"] = description ;
+        // 获取三级分类id
+        var catalog3Id = $("#ctg3ForSpuList").combobox("getValue");  //参考  三级分类： <select name="ctg3ForSpuName" id="ctg3ForSpuList"  class="easyui-combobox"
+        spuInfo["catalog3Id"] = catalog3Id ;
+
+        // 获取spu销售属性   【临时字段List<SpuSaleAttr> spuSaleAttrList】
+        var saleAttrRows = $("#spuSaleAttrDg").datagrid("getRows");//获取所有行
+        console.log("spu销售属性JSON"+JSON.stringify(saleAttrRows))
+        $(saleAttrRows).each(function(i,saleAttrJson){
+            saleAttrId = saleAttrJson.id;
+            saleAttrName = saleAttrJson.saleAttrName;
+            spuSaleAttrValueJson = saleAttrJson.spuSaleAttrValueJson;
+            spuInfo["spuSaleAttrList["+i+"].saleAttrId"] = saleAttrId;
+            spuInfo["spuSaleAttrList["+i+"].saleAttrName"] = saleAttrName;
+
+            // 销售属性值
+            spuSaleAttrValueJsonRows = spuSaleAttrValueJson.rows;
+            console.log("spuSaleAttrValueJsonRows"+JSON.stringify(spuSaleAttrValueJsonRows))
+            //{"id":"","valueName":"请输入销售属性值名称"},{"id":"","valueName":"请输入销售属性值名称"}
+            $(spuSaleAttrValueJsonRows).each(function(j,spuSaleAttrValueJsonRowsJson){
+                spuInfo["spuSaleAttrList["+i+"].spuSaleAttrValueList["+j+"].saleAttrValueName"] = spuSaleAttrValueJsonRowsJson.valueName;
+                spuInfo["spuSaleAttrList["+i+"].spuSaleAttrValueList["+j+"].saleAttrId"] = saleAttrId;
+            });
+        });
+        console.log("====="+JSON.stringify(spuInfo))
+        //获取图片信息进行封装    【临时字段List<SpuImage> spuImageList】
+        //    【SpuImage】bean : id、spuId、imgName、imgUrl
+        //        页面能获取得到的   imgName图片简称   imgUrl图片路径
+        var spuImgRows = $("#spuImgDg").datagrid("getRows");
+        $(spuImgRows).each(function (i,spuImgRow) {
+
+            // 获取imgName图片简称
+            imgName = spuImgRow.imgName;
+            spuInfo["spuImageList["+i+"].imgName"] = imgName;
+            // 获取imgUrl图片路径
+            imgUrl = spuImgRow.imgUrl;
+            spuInfo["spuImageList["+i+"].imgUrl"] = imgUrl;
+        })
+
+        // 异步提交后台保存
+       $.get("saveSpu",spuInfo,function(data){
+            alert(success);
+        });
+
+        // 关闭spu对话框
+        $("#spu_dlg").dialog("close");
+    }
+</script>
+</body>
+</html>

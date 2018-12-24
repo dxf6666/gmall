@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理</title>
+    <!--静态资源默认从static目录下加载-->
+
+    <!--=================== easyui ============================-->
+    <link rel="stylesheet" type="text/css" href="/easyui/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/easyui/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/easyui/demo.css">
+    <!--先加载jQuery.min.js 原生的，再加载在原生基础上包装的-->
+    <script type="text/javascript" src="/easyui/jquery.min.js"></script>
+    <script type="text/javascript" src="/easyui/jquery.easyui.min.js"></script>
+    <!--========================================================-->
+
+    <!--=================  图片插件  ============================-->
+    <script type="text/javascript" src="/easyui/datagrid-detailview.js"></script>
+    <script type="text/javascript" src="/easyui/webuploader/webuploader.js"></script>
+    <link rel="stylesheet" type="text/css" href="/easyui/webuploader/webuploader.css">
+    <style>
+        ul{
+            list-style:square;
+        }
+    </style>
+</head>
+<!-- 使用easyui 心法：     控件 -- > 中有: 属性、方法、事件-->
+
+<body class="easyui-layout">
+<!-- data-options 样式选择     于style不冲突，局部样式优先级最高-->
+    <div data-options="region:'north',border:false" style="height:60px;background:#B3DFDA;padding:10px"><h2>商品后台管理系统</h2></div>
+    <div data-options="region:'west',split:true,title:'菜单'" style="width:223px;padding:10px;">
+        <!--左侧菜单选项-->
+        <div class="easyui-accordion" style="width:200px;height:200px;">
+            <div title="基本信息管理">
+                <ul>
+                    <li>
+                        <a href="javascript:add_tab('平台属性管理','attrListPage')" style="text-decoration:none;">平台属性管理</a>
+                    </li>
+                </ul>
+            </div>
+            <div title="商品SPU管理">
+                <ul>
+                    <li><a href="javascript:add_tab('商品SPU管理','spuListPage')" style="text-decoration:none;">商品SPU管理</a></li>
+                </ul>
+            </div>
+            <div title="广告管理">
+                <ul>
+                    <li>
+                        <span>功能未开放</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div data-options="region:'east',split:true,collapsed:true,title:'功能'" style="width:100px;padding:10px;">east region</div>
+    <div data-options="region:'south',border:false" style="height:50px;background:#A9FACD;padding:10px;">不当码农</div>
+    <div data-options="region:'center',title:'详情'">
+        <!--点击一些菜单项[选项卡]，会在该位置【tab组件】中添加详情-->
+        <div id="tt" class="easyui-tabs" style="width:100%;height:100%;" >
+
+        </div>
+
+    </div>
+
+
+<script type="text/javascript">
+    function add_tab(title,url){
+        var b = $('#tt').tabs("exists",title);
+        if(!b){
+            /*给tabs组件添加选项卡*/
+            $('#tt').tabs('add',{
+                title: title,
+                href: url,
+                closable:true
+            });
+            // title选项卡标题     href:加载选项卡页面
+        }else{
+            $('#tt').tabs("select",title);
+        }
+        /*
+        * exists 判断该标题的选项卡是否存在
+        * select  跳转到该标题的选项卡
+        * */
+    }
+</script>
+<!--   =========  点击菜单项[选项卡] 就往tab组件中添加页面
+   1：在controller中抒写 attrListPage处理方法，跳转到attrListPage平台属性管理页面
+    <a href="javascript:add_tab('平台属性管理','attrListPage')" style="text-decoration:none;">平台属性管理</a>
+    点击超链接，会去调用add_tab方法，往组件tabs中添加页面
+   2：js中提供add_tab方法，把参数传入，参数1：页面标题   2：远程加载页面，URL会带着attrListPage去找，所以controller层要处理下
+
+-->
+</body>
+</html>
